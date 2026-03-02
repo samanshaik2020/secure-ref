@@ -50,6 +50,41 @@ export type JwtSignOptions = {
     audience?: string | string[];
 };
 
+// ─── Modes ───────────────────────────────────────────────────────────────────
+
+/**
+ * Security mode presets.
+ *
+ * - `dev`        — relaxed for local development (no HSTS, allows unsafe-inline scripts)
+ * - `production` — strong OWASP defaults (auto-selected when NODE_ENV=production)
+ * - `strict`     — maximum security for high-value targets (banking, finance, healthcare)
+ *
+ * User-supplied options always override the mode preset.
+ */
+export type Mode = 'dev' | 'production' | 'strict';
+
+const MODE_CONFIGS: Record<Mode, Partial<SecureRefOptions>> = {
+    dev: {
+        hsts: false,
+        coep: false,
+        csp: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+        removeServer: false,
+    },
+    production: {
+        hsts: 'max-age=31536000; includeSubDomains',
+        frameOptions: 'DENY',
+        csp: "default-src 'self'; script-src 'self'",
+        removeServer: true,
+    },
+    strict: {
+        hsts: 'max-age=63072000; includeSubDomains; preload',
+        frameOptions: 'DENY',
+        csp: "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+        permissionsPolicy: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+        removeServer: true,
+    },
+};
+
 // ─── Default Headers ─────────────────────────────────────────────────────────
 
 const DEFAULT_HEADERS: Record<string, string> = {
@@ -68,67 +103,70 @@ const DEFAULT_HEADERS: Record<string, string> = {
 // ─── Main Middleware ──────────────────────────────────────────────────────────
 
 /**
- * Creates security middleware that sets all OWASP-recommended headers.
+ * Creates security middleware that sets OWASP-recommended HTTP security headers.
  *
- * @example Express
+ * Pass `mode` to select a preset, then override individual headers as needed.
+ * Auto-detects NODE_ENV when no mode is specified.
+ *
+ * @example Auto mode (recommended)
  * ```ts
- * import secureRef from 'secure-ref';
- * app.use(secureRef());
+ * app.use(secureRef()); // 'dev' locally, 'production' when NODE_ENV=production
+ * ```
+ * @example Explicit modes
+ * ```ts
+ * app.use(secureRef({ mode: 'strict' }));                    // banking/finance
+ * app.use(secureRef({ mode: 'production', csp: 'custom' })); // override one header
  * ```
  */
-export default function secureRef(options: SecureRefOptions = {}) {
+export default function secureRef(options: SecureRefOptions & { mode?: Mode } = {}) {
+    // 1. Resolve mode: explicit > NODE_ENV > 'dev'
+    const mode: Mode = options.mode ??
+        (process.env['NODE_ENV'] === 'production' ? 'production' : 'dev');
+
+    // 2. Merge: defaults ← mode preset ← user options (user always wins)
+    const { mode: _mode, ...userOpts } = options;
+    const resolved: SecureRefOptions = { ...MODE_CONFIGS[mode], ...userOpts };
+
+    // 3. Build the headers map from resolved options
     const headers = { ...DEFAULT_HEADERS };
 
-    // Allow per-header overrides or disabling (set to false)
-    if (options.csp !== undefined) {
-        if (options.csp === false) delete headers['Content-Security-Policy'];
-        else headers['Content-Security-Policy'] = options.csp;
-    }
-    if (options.frameOptions !== undefined) {
-        if (options.frameOptions === false) delete headers['X-Frame-Options'];
-        else headers['X-Frame-Options'] = options.frameOptions;
-    }
-    if (options.hsts !== undefined) {
-        if (options.hsts === false) delete headers['Strict-Transport-Security'];
-        else headers['Strict-Transport-Security'] = options.hsts;
-    }
-    if (options.contentTypeOptions !== undefined) {
-        if (options.contentTypeOptions === false) delete headers['X-Content-Type-Options'];
-        else headers['X-Content-Type-Options'] = options.contentTypeOptions;
-    }
-    if (options.referrerPolicy !== undefined) {
-        if (options.referrerPolicy === false) delete headers['Referrer-Policy'];
-        else headers['Referrer-Policy'] = options.referrerPolicy;
-    }
-    if (options.permissionsPolicy !== undefined) {
-        if (options.permissionsPolicy === false) delete headers['Permissions-Policy'];
-        else headers['Permissions-Policy'] = options.permissionsPolicy;
-    }
-    if (options.coop !== undefined) {
-        if (options.coop === false) delete headers['Cross-Origin-Opener-Policy'];
-        else headers['Cross-Origin-Opener-Policy'] = options.coop;
-    }
-    if (options.corp !== undefined) {
-        if (options.corp === false) delete headers['Cross-Origin-Resource-Policy'];
-        else headers['Cross-Origin-Resource-Policy'] = options.corp;
-    }
-    if (options.coep !== undefined) {
-        if (options.coep === false) delete headers['Cross-Origin-Embedder-Policy'];
-        else headers['Cross-Origin-Embedder-Policy'] = options.coep;
+    function applyOpt(opt: string | false | undefined, headerName: string) {
+        if (opt === undefined) return;
+        if (opt === false) delete headers[headerName];
+        else headers[headerName] = opt;
     }
 
-    // Pre-compute entries once (not per-request)
+    applyOpt(resolved.csp, 'Content-Security-Policy');
+    applyOpt(resolved.frameOptions, 'X-Frame-Options');
+    applyOpt(resolved.hsts, 'Strict-Transport-Security');
+    applyOpt(resolved.contentTypeOptions, 'X-Content-Type-Options');
+    applyOpt(resolved.referrerPolicy, 'Referrer-Policy');
+    applyOpt(resolved.permissionsPolicy, 'Permissions-Policy');
+    applyOpt(resolved.xssProtection, 'X-XSS-Protection');
+    applyOpt(resolved.coop, 'Cross-Origin-Opener-Policy');
+    applyOpt(resolved.corp, 'Cross-Origin-Resource-Policy');
+    applyOpt(resolved.coep, 'Cross-Origin-Embedder-Policy');
+
+    // Pre-compute entries once at factory time — zero overhead per request
     const entries = Object.entries(headers) as [string, string][];
+    const shouldRemoveServer = resolved.removeServer !== false;
 
     return (req: unknown, res: { setHeader: (k: string, v: string) => void; removeHeader: (k: string) => void }, next: () => void) => {
         for (const [k, v] of entries) res.setHeader(k, v);
-        if (options.removeServer !== false) {
+        if (shouldRemoveServer) {
             res.removeHeader('Server');
             res.removeHeader('X-Powered-By');
         }
         next();
     };
 }
+
+/** Returns the active mode that would be selected for a given options object */
+secureRef.resolveMode = (options: { mode?: Mode } = {}): Mode =>
+    options.mode ?? (process.env['NODE_ENV'] === 'production' ? 'production' : 'dev');
+
+/** The full mode configuration map (useful for introspection/tooling) */
+secureRef.modes = MODE_CONFIGS;
 
 // Attach static helpers to the default export
 secureRef.reference = (): typeof REFERENCE => REFERENCE;
@@ -374,5 +412,5 @@ export const browser = { reference: secureRef.reference, sanitize, escapeHtml, n
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 
-export const version = '0.1.0';
+export const version = '1.1.0';
 secureRef.version = version;

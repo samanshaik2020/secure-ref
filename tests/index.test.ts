@@ -1,6 +1,6 @@
 /**
  * tests/index.test.ts
- * Full test suite for secure-ref v0.1.0
+ * Full test suite for secure-ref v1.1.0
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -29,11 +29,11 @@ const fakeReq = { headers: {}, socket: {} };
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
 describe('secureRef() middleware', () => {
-    it('sets all 10 OWASP headers by default', () => {
+    it('sets all 10 OWASP headers in production mode', () => {
         const res = mockRes();
-        secureRef()(fakeReq as never, res, vi.fn());
+        secureRef({ mode: 'production' })(fakeReq as never, res, vi.fn());
 
-        expect(res._h['Content-Security-Policy']).toBe("default-src 'self'");
+        expect(res._h['Content-Security-Policy']).toBe("default-src 'self'; script-src 'self'");
         expect(res._h['X-Content-Type-Options']).toBe('nosniff');
         expect(res._h['X-Frame-Options']).toBe('DENY');
         expect(res._h['Strict-Transport-Security']).toBe('max-age=31536000; includeSubDomains');
@@ -45,9 +45,9 @@ describe('secureRef() middleware', () => {
         expect(res._h['Cross-Origin-Embedder-Policy']).toBe('require-corp');
     });
 
-    it('removes Server and X-Powered-By by default', () => {
+    it('removes Server and X-Powered-By in production mode', () => {
         const res = mockRes();
-        secureRef()(fakeReq as never, res, vi.fn());
+        secureRef({ mode: 'production' })(fakeReq as never, res, vi.fn());
         expect(res._r).toContain('Server');
         expect(res._r).toContain('X-Powered-By');
     });
@@ -74,6 +74,92 @@ describe('secureRef() middleware', () => {
         const res = mockRes();
         secureRef({ hsts: false })(fakeReq as never, res, vi.fn());
         expect(res._h['Strict-Transport-Security']).toBeUndefined();
+    });
+});
+
+// ─── Smart Security Modes ──────────────────────────────────────────────────────────────
+
+describe('Smart Security Modes', () => {
+    it('dev mode — disables HSTS and COEP, keeps Server header', () => {
+        const res = mockRes();
+        secureRef({ mode: 'dev' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Strict-Transport-Security']).toBeUndefined();
+        expect(res._h['Cross-Origin-Embedder-Policy']).toBeUndefined();
+        // removeServer: false in dev mode
+        expect(res._r).not.toContain('Server');
+    });
+
+    it('dev mode — allows unsafe-inline scripts (for hot reload)', () => {
+        const res = mockRes();
+        secureRef({ mode: 'dev' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Content-Security-Policy']).toContain("'unsafe-inline'");
+    });
+
+    it('production mode — enforces HSTS and strict CSP', () => {
+        const res = mockRes();
+        secureRef({ mode: 'production' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Strict-Transport-Security']).toContain('max-age=31536000');
+        expect(res._h['X-Frame-Options']).toBe('DENY');
+        expect(res._h['Content-Security-Policy']).toBe("default-src 'self'; script-src 'self'");
+        // removeServer: true → Server is removed
+        expect(res._r).toContain('Server');
+    });
+
+    it('strict mode — max-age 2 years HSTS with preload', () => {
+        const res = mockRes();
+        secureRef({ mode: 'strict' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Strict-Transport-Security']).toContain('preload');
+        expect(res._h['Strict-Transport-Security']).toContain('63072000');
+    });
+
+    it('strict mode — CSP allows nothing by default (default-src none)', () => {
+        const res = mockRes();
+        secureRef({ mode: 'strict' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Content-Security-Policy']).toContain("default-src 'none'");
+        expect(res._h['Content-Security-Policy']).toContain("frame-ancestors 'none'");
+    });
+
+    it('strict mode — Permissions-Policy blocks payment and usb', () => {
+        const res = mockRes();
+        secureRef({ mode: 'strict' })(fakeReq as never, res, vi.fn());
+        expect(res._h['Permissions-Policy']).toContain('payment=()');
+        expect(res._h['Permissions-Policy']).toContain('usb=()');
+    });
+
+    it('user options always override mode preset', () => {
+        const res = mockRes();
+        secureRef({ mode: 'strict', csp: "default-src 'self'" })(fakeReq as never, res, vi.fn());
+        // User CSP overrides strict mode's CSP
+        expect(res._h['Content-Security-Policy']).toBe("default-src 'self'");
+        // But strict mode's HSTS still applies
+        expect(res._h['Strict-Transport-Security']).toContain('preload');
+    });
+
+    it('resolveMode() returns dev by default when NODE_ENV is not production', () => {
+        const original = process.env['NODE_ENV'];
+        delete process.env['NODE_ENV'];
+        expect(secureRef.resolveMode()).toBe('dev');
+        process.env['NODE_ENV'] = original;
+    });
+
+    it('resolveMode() returns production when NODE_ENV=production', () => {
+        const original = process.env['NODE_ENV'];
+        process.env['NODE_ENV'] = 'production';
+        expect(secureRef.resolveMode()).toBe('production');
+        process.env['NODE_ENV'] = original;
+    });
+
+    it('resolveMode() respects explicit mode regardless of NODE_ENV', () => {
+        process.env['NODE_ENV'] = 'production';
+        expect(secureRef.resolveMode({ mode: 'strict' })).toBe('strict');
+        expect(secureRef.resolveMode({ mode: 'dev' })).toBe('dev');
+        delete process.env['NODE_ENV'];
+    });
+
+    it('secureRef.modes exposes all 3 mode configs', () => {
+        expect(secureRef.modes).toHaveProperty('dev');
+        expect(secureRef.modes).toHaveProperty('production');
+        expect(secureRef.modes).toHaveProperty('strict');
     });
 });
 
@@ -302,5 +388,9 @@ describe('log() + configureLogger()', () => {
 describe('version', () => {
     it('exports a semver version string', () => {
         expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    it('is v1.1.0', () => {
+        expect(version).toBe('1.1.0');
     });
 });
