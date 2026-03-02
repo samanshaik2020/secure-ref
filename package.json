@@ -1,0 +1,52 @@
+{
+  "name": "secure-ref",
+  "version": "0.1.0",
+  "description": "Helmet + OWASP Top 10:2025 reference in one zero-dependency import. Ultra-lightweight security middleware + education.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint src --ext .ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samanshaik2020/secure-ref.git"
+  },
+  "keywords": [
+    "security",
+    "owasp",
+    "headers",
+    "helmet",
+    "csp",
+    "jwt",
+    "ratelimit",
+    "xss"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/secure-ref/issues"
+  },
+  "homepage": "https://github.com/yourusername/secure-ref#readme",
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

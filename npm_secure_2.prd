@@ -1,0 +1,193 @@
+Basic Sanitizer (secureRef.sanitize(input: string))
+Simple XSS strip (regex-based, for quick use).
+
+
+5.2 Extended Features (v1.1.0 - Modular Exports)
+Keep core small; these are tree-shakable.
+
+Secure Cookies (secureRef.cookie(options))
+httpOnly: true, secure: true, sameSite: 'Strict', maxAge: 3600
+
+CSP Nonce Generator (secureRef.nonce())
+Crypto-random nonce + browser usage example.
+
+Rate Limiter (secureRef.rateLimit(config))
+In-memory token bucket (configurable window/max).
+
+JWT Helpers (secureRef.jwt)
+sign(payload, secret), verify(token, secret) with OWASP JWT best practices enforced.
+
+Security Logger (secureRef.log(event, data))
+Console + Sentry-ready.
+
+SRI Hash (secureRef.sri(url)): Subresource Integrity for CDNs.
+Package Scanner (secureRef.scan()): Runs npm audit + supply chain checks.
+
+Feature Prioritization:
+
+Must-Have: Core middleware + reference.
+Should-Have: Cookies, nonce, rate limit.
+Could-Have: JWT, logger, SRI.
+
+
+6. Technical Requirements
+Architecture
+
+Entry Point: src/index.ts (ESM + CJS dual).
+Structure:textsecure-ref/
+├── src/
+│   ├── index.ts          # Main export
+│   ├── reference.ts      # Static JSON data
+│   ├── middleware.ts
+│   ├── helpers/          # cookies.ts, nonce.ts, etc.
+│   └── types.ts
+├── dist/                 # Built
+├── examples/             # Express, Fastify, etc.
+├── tests/                # Vitest
+└── reference.json        # Source of truth for refs
+
+Tech Stack
+
+Runtime: Node.js 18+ (LTS).
+Build: tsc + esbuild (for minification).
+Types: Full TypeScript + JSDoc.
+Testing: Vitest (unit + e2e).
+Linting: ESLint + Prettier.
+
+API Signature
+TypeScriptimport secureRef, { cookie, nonce, rateLimit } from 'secure-ref';
+
+app.use(secureRef({ /* opts */ }));
+
+const ref = secureRef.reference();
+const token = secureRef.jwt.sign({ user: 'shaik' }, process.env.SECRET);
+
+7. Non-Functional Requirements
+
+Size: Core <3KB gzipped; full <5KB.
+Performance: <1ms/request overhead.
+Security:
+Zero runtime deps.
+Enable npm provenance.
+npm audit clean.
+Follow OWASP Node.js Cheat Sheet.
+
+Browser Support: Reference works in browsers (via secure-ref/browser).
+License: MIT.
+Docs: README.md with badges, examples, migration guide.
+
+
+8. Dependencies & Constraints
+
+Zero Runtime Deps: Use only crypto, http, url.
+Dev Deps: typescript, vitest, @types/node.
+No External APIs: All data embedded.
+Constraints: No breaking changes in v1.x.
+
+
+9. Security & Compliance
+
+Package Security:
+2FA on npm/GitHub.
+Signed commits.
+SECURITY.md with reporting.
+
+App Security:
+Aligns with OWASP Top 10:2025 (A02, A03).
+Supply chain: Pin all dev deps.
+
+Compliance: GDPR-ready (no tracking), SOC2-friendly.
+
+Risks & Mitigations:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RiskLikelihoodMitigationHeader conflicts (w/ Helmet)MediumDocs: "Use one or the other"Overly strict defaultsLowConfigurable + warningsReference outdatedLowv1.1 auto-update from JSON
+
+10. Roadmap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VersionDateFeaturesv0.1.0TodayCore headers + referencev1.0.0+2 daysExtended helpers + testsv1.1.0+1 weekCLI (npx secure-ref init)v2.0.0Q2 2026Browser bundle + Vercel docs site
+
+11. Appendix: Key Data Sources
+OWASP Top 10:2025 (Embed in reference.json)
+JSON{
+  "A01:2025": { "name": "Broken Access Control", "description": "..." },
+  "A02:2025": { "name": "Security Misconfiguration", "description": "..." },
+  "A03:2025": { "name": "Software Supply Chain Failures", "description": "..." }
+  // ... full 10
+}
+Full Reference JSON Structure
+
+Use reference.json as source (generate via script if needed).
+
+References:
+
+OWASP Secure Headers: https://owasp.org/www-project-secure-headers/
+OWASP Top 10:2025: https://owasp.org/Top10/2025/
+Node.js Security: https://nodejs.org/en/learn/getting-started/security-best-practices
+
+
+12. Next Steps for Claude Code Generation
+
+Create Repo: secure-ref on GitHub.
+Run This: npm init -y && npm i -D typescript vitest @types/node
+Generate:
+src/index.ts (full code)
+src/reference.json (populated)
+README.md
+package.json (with scripts: build, test, prepublish)
+
+Test: All examples work.
+
+Prompt for Claude: "Build this PRD exactly as specified. Start with package.json and reference.json.

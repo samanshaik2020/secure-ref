@@ -1,0 +1,119 @@
+# Product Requirements Document (PRD) for `secure-ref`
+
+**Version:** 1.0  
+**Date:** March 02, 2026  
+**Author:** Grok (xAI) - Professional Developer & Cybersecurity Advisor  
+**Status:** Draft for Claude Code Generation  
+
+---
+
+## 1. Executive Summary
+
+**secure-ref** is a **zero-dependency, ultra-lightweight (<5 KB gzipped) NPM package** that delivers production-grade web application security **and** instant, built-in security education for developers.
+
+It combines:
+- **Active Security**: Framework-agnostic middleware for OWASP-recommended HTTP headers, plus helpers for cookies, CSP nonces, rate limiting, etc.
+- **Security Reference**: A comprehensive `.reference()` API that embeds OWASP Top 10:2025, Secure Headers Project, and actionable checklists.
+
+**Why it exists**: Helmet is great for headers, but nothing teaches *why* you're setting them. `secure-ref` is "Helmet + OWASP in one import" — perfect for solo devs, startups, and teams who want security **without** the learning curve or bloat.
+
+**Target Launch**: v1.0.0 on npm in <48 hours.  
+**Projected Impact**: 10k+ weekly downloads in 6 months (leveraging Helmet's 1M+ downloads).
+
+---
+
+## 2. Problem Statement & Opportunity
+
+### Problems Today
+- **Security Gaps**: 90%+ of Node.js apps lack proper headers (per OWASP data). Common attacks: XSS, clickjacking, MIME sniffing.
+- **Developer Friction**: Searching "X-Frame-Options best practices" wastes hours. OWASP docs are scattered.
+- **Bloat**: Existing packages (Helmet: 50KB+, others with deps) violate "small but powerful" ethos.
+- **Supply Chain Risks (2026)**: npm attacks (e.g., Shai Hulud, chalk/debug compromises) highlight need for zero-dependency tools.
+
+### Opportunity
+- **Unique Differentiator**: Security **+** Reference in one tiny package. No competitors do this.
+- **Market Fit**: 2M+ Node.js devs on npm. Ideal for Express/Fastify/Hono/Next.js users.
+- **Monetization Potential**: Free core + premium CLI/docs site later.
+
+**2026 OWASP Alignment**:
+- **Top 10:2025**: A01 Broken Access Control, A02 Security Misconfiguration, A03 Software Supply Chain Failures.
+- **Secure Headers Project**: 11+ headers (frozen during CMS migration, but standards unchanged).
+
+---
+
+## 3. Goals & Objectives
+
+### Business Goals
+- **Primary**: Become the "go-to" security starter kit for Node.js.
+- **Secondary**: Educate 50k+ devs on OWASP via package usage.
+
+### Product Goals
+- **Secure by Default**: 100% OWASP-compliant headers out-of-box.
+- **Educate Instantly**: `secureRef.reference()` answers "why" in <1s.
+- **Developer Experience**: One-liner setup, TypeScript-first, zero config.
+- **Performance**: <2ms overhead per request, <5KB total.
+
+### Success Metrics (Post-Launch)
+- **Downloads**: 5k/week by month 3.
+- **Stars**: 500 on GitHub.
+- **NPS**: >9/10 from surveys.
+- **Security Scans**: 0 high vulns (npm audit).
+
+---
+
+## 4. Target Users & Personas
+
+| Persona | Description | Use Case |
+|---------|-------------|----------|
+| **Solo Dev** | Indie hacker building MVPs | Quick `npm i secure-ref` + headers |
+| **Startup Team** | 5-20 devs on Node/TS | Reference for audits + compliance |
+| **Enterprise Dev** | Large orgs (React/Next) | CSP nonce + JWT helpers |
+| **Security Advocate** | Pen testers, educators | Embed `.reference()` in docs |
+
+**Frameworks Supported**: Express, Fastify, Hono, Koa, plain `http`, Next.js (App Router).
+
+---
+
+## 5. Features
+
+### 5.1 Core Features (MVP - v1.0.0)
+All zero-dependency, built on Node.js `crypto` and `http`.
+
+1. **Security Middleware** (`secureRef(options?)`)
+   - Applies 11 OWASP Secure Headers (configurable).
+   - **Default Headers** (from Secure Headers Project):
+     | Header | Default Value | Purpose |
+     |--------|---------------|---------|
+     | `Content-Security-Policy` | `default-src 'self'` | XSS prevention |
+     | `X-Content-Type-Options` | `nosniff` | MIME sniffing block |
+     | `X-Frame-Options` | `DENY` | Clickjacking |
+     | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | HSTS |
+     | `Referrer-Policy` | `no-referrer` | Leak prevention |
+     | `Permissions-Policy` | `camera=(), microphone=()` | Feature control |
+     | `X-XSS-Protection` | `0` | Legacy XSS |
+     | `Cross-Origin-Opener-Policy` | `same-origin` | COOP |
+     | `Cross-Origin-Resource-Policy` | `same-origin` | CORP |
+     | `Cross-Origin-Embedder-Policy` | `require-corp` | COEP |
+     | `Server` | `''` (removed) | Info disclosure |
+
+   - Options: Override any header, e.g., `{ csp: "script-src 'self' 'nonce-123'" }`.
+
+2. **Built-in Reference** (`secureRef.reference()`)
+   - Returns JSON with:
+     - **Headers**: `{ header: { explanation, owaspLink, attackPrevented, example } }`
+     - **OWASP Top 10:2025**: Full summaries + mitigations (A01-A10).
+     - **Best Practices**: Checklists (e.g., "Rate limit all APIs").
+     - **Links**: OWASP, MDN, CVE examples.
+   - Example Output Snippet:
+     ```json
+     {
+       "headers": {
+         "X-Frame-Options": {
+           "explanation": "Prevents clickjacking...",
+           "owaspLink": "https://owasp.org/www-project-secure-headers/"
+         }
+       },
+       "owaspTop10": {
+         "A03:2025": { "name": "Software Supply Chain Failures", "mitigation": "..." }
+       }
+     }

@@ -1,0 +1,290 @@
+{
+    "headers": {
+        "Content-Security-Policy": {
+            "explanation": "Content Security Policy (CSP) defines what sources of content are allowed to be loaded by the browser. It is the primary defence against Cross-Site Scripting (XSS) attacks by controlling which scripts, styles, images, and other resources can execute.",
+            "defaultValue": "default-src 'self'",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#content-security-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+            "attackPrevented": "XSS (Cross-Site Scripting), data injection, clickjacking via frames",
+            "example": "Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;",
+            "riskLevel": "critical"
+        },
+        "X-Content-Type-Options": {
+            "explanation": "Prevents browsers from MIME-sniffing a response away from the declared content-type. Without this header, old browsers might execute a .jpg file as JavaScript if it contains script-like content.",
+            "defaultValue": "nosniff",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#x-content-type-options",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options",
+            "attackPrevented": "MIME-type sniffing, drive-by downloads, content injection",
+            "example": "X-Content-Type-Options: nosniff",
+            "riskLevel": "high"
+        },
+        "X-Frame-Options": {
+            "explanation": "Controls whether a browser should be allowed to render a page in a <frame>, <iframe>, <embed>, or <object>. This prevents clickjacking attacks where a malicious site embeds your site in a frame to trick users into clicking on hidden elements.",
+            "defaultValue": "DENY",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#x-frame-options",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+            "attackPrevented": "Clickjacking, UI redressing attacks",
+            "example": "X-Frame-Options: DENY",
+            "riskLevel": "high"
+        },
+        "Strict-Transport-Security": {
+            "explanation": "HTTP Strict Transport Security (HSTS) instructs browsers to only access the site over HTTPS for a specified period. Once set, the browser refuses HTTP connections and automatically upgrades to HTTPS, even if the user types 'http://'.",
+            "defaultValue": "max-age=31536000; includeSubDomains",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#http-strict-transport-security",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+            "attackPrevented": "SSL stripping, protocol downgrade attacks, man-in-the-middle attacks",
+            "example": "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload",
+            "riskLevel": "critical"
+        },
+        "Referrer-Policy": {
+            "explanation": "Controls how much referrer information (sent via the Referer header) should be included with requests. Prevents leaking sensitive URL parameters or paths to third-party services.",
+            "defaultValue": "no-referrer",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#referrer-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy",
+            "attackPrevented": "Information disclosure, session token leakage via Referer header",
+            "example": "Referrer-Policy: strict-origin-when-cross-origin",
+            "riskLevel": "medium"
+        },
+        "Permissions-Policy": {
+            "explanation": "Allows or denies browser features and APIs (camera, microphone, geolocation, etc.) for the origin. Replaces the older Feature-Policy header. Limits the attack surface by disabling unneeded browser capabilities.",
+            "defaultValue": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#permissions-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+            "attackPrevented": "Unauthorized access to user's camera/mic/location, fingerprinting via FLoC",
+            "example": "Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self)",
+            "riskLevel": "medium"
+        },
+        "X-XSS-Protection": {
+            "explanation": "A legacy header that was used to activate the XSS filter built into older browsers (IE, Chrome <78, Safari). Modern browsers have deprecated this in favour of CSP. The OWASP-recommended value is '0' to disable the broken filter, which could itself introduce vulnerabilities.",
+            "defaultValue": "0",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#x-xss-protection",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection",
+            "attackPrevented": "Legacy XSS filter bypass (setting to 0 prevents filter-induced vulnerabilities)",
+            "example": "X-XSS-Protection: 0",
+            "riskLevel": "low"
+        },
+        "Cross-Origin-Opener-Policy": {
+            "explanation": "COOP isolates browsing context groups. It prevents a malicious website opened in a new tab from gaining access to your global object. Essential for enabling cross-origin isolation and access to high-resolution timers (SharedArrayBuffer).",
+            "defaultValue": "same-origin",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#cross-origin-opener-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy",
+            "attackPrevented": "Cross-origin window access, Spectre/side-channel attacks",
+            "example": "Cross-Origin-Opener-Policy: same-origin",
+            "riskLevel": "high"
+        },
+        "Cross-Origin-Resource-Policy": {
+            "explanation": "CORP prevents other origins from loading your resources (images, scripts, etc.) via no-cors requests. Defends against cross-site information leaks and Spectre-based side-channel attacks.",
+            "defaultValue": "same-origin",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#cross-origin-resource-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Resource-Policy",
+            "attackPrevented": "Spectre side-channel attacks, cross-origin data leakage",
+            "example": "Cross-Origin-Resource-Policy: same-origin",
+            "riskLevel": "high"
+        },
+        "Cross-Origin-Embedder-Policy": {
+            "explanation": "COEP requires all cross-origin resources to explicitly grant permission to be loaded (via CORS or CORP headers). Required alongside COOP to enable cross-origin isolation (SharedArrayBuffer, high-res timers).",
+            "defaultValue": "require-corp",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#cross-origin-embedder-policy",
+            "mdnLink": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy",
+            "attackPrevented": "Cross-origin data leaks, Spectre mitigations bypass",
+            "example": "Cross-Origin-Embedder-Policy: require-corp",
+            "riskLevel": "high"
+        },
+        "Server": {
+            "explanation": "Removing the Server header prevents information disclosure about the web server technology and version. Attackers use this to specifically target known vulnerabilities in older server versions.",
+            "defaultValue": "(removed)",
+            "owaspLink": "https://owasp.org/www-project-secure-headers/#server",
+            "attackPrevented": "Fingerprinting, targeted attacks on specific server software",
+            "example": "Server header should be removed entirely",
+            "riskLevel": "medium"
+        }
+    },
+    "owaspTop10": {
+        "A01:2025": {
+            "name": "Broken Access Control",
+            "description": "Access control enforces policy such that users cannot act outside of their intended permissions. Failures lead to unauthorized information disclosure, modification, or destruction of data.",
+            "mitigation": "Deny access by default. Implement proper RBAC/ABAC. Log and alert on access control failures. Rate limit API and controller access. Invalidate sessions after logout.",
+            "owaspLink": "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+            "cweIds": [
+                "CWE-200",
+                "CWE-201",
+                "CWE-352"
+            ],
+            "prevalence": "94% of applications tested had some form of broken access control"
+        },
+        "A02:2025": {
+            "name": "Security Misconfiguration",
+            "description": "Applications are frequently misconfigured: unnecessary features enabled, default accounts unchanged, error handling revealing stack traces, or missing security headers. This is what secure-ref primarily addresses.",
+            "mitigation": "Use secure-ref to automate OWASP headers. Disable unused features. Segment architecture. Implement automated config validation. Use minimal, hardened base images.",
+            "owaspLink": "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/",
+            "cweIds": [
+                "CWE-16",
+                "CWE-611"
+            ],
+            "prevalence": "90%+ of Node.js apps lack one or more recommended security headers"
+        },
+        "A03:2025": {
+            "name": "Software Supply Chain Failures",
+            "description": "Malicious code injected via compromised npm packages, insecure CI/CD pipelines, or dependency confusion attacks. Examples: event-stream (2018), ua-parser-js (2021), node-ipc (2022).",
+            "mitigation": "Use zero-dependency packages (like secure-ref). Run npm audit regularly. Enable npm provenance. Pin dependency versions. Use lockfiles. Audit transitive dependencies.",
+            "owaspLink": "https://owasp.org/Top10/A03_2021-Injection/",
+            "cweIds": [
+                "CWE-1104",
+                "CWE-506"
+            ],
+            "prevalence": "Software supply chain attacks grew 742% in 2022 compared to the prior three years combined"
+        },
+        "A04:2025": {
+            "name": "Insecure Design",
+            "description": "Missing or ineffective control design — not just implementation bugs. Includes threat modelling failures, insecure architecture decisions, or missing compensating controls.",
+            "mitigation": "Integrate threat modelling into design phase. Use secure design patterns. Define security user stories. Implement reference architectures. Apply defence-in-depth.",
+            "owaspLink": "https://owasp.org/Top10/A04_2021-Insecure_Design/",
+            "cweIds": [
+                "CWE-73",
+                "CWE-183",
+                "CWE-209"
+            ],
+            "prevalence": "A new category for 2021/2025, reflecting the shift to design-level security"
+        },
+        "A05:2025": {
+            "name": "Security Misconfiguration (Application Level)",
+            "description": "Improper security configuration at the application layer: verbose error messages, default credentials, unnecessary HTTP methods enabled, missing security headers, overly permissive CORS.",
+            "mitigation": "Use secure-ref for automatic header hardening. Validate all configuration at startup. Implement environment parity checks. Use security linters.",
+            "owaspLink": "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+            "cweIds": [
+                "CWE-16",
+                "CWE-2"
+            ],
+            "prevalence": "Moved up from #6 in prior OWASP editions"
+        },
+        "A06:2025": {
+            "name": "Vulnerable and Outdated Components",
+            "description": "Using components (libraries, frameworks, modules) with known vulnerabilities. Many breaches exploit publicly known vulnerabilities for which patches exist but haven't been applied.",
+            "mitigation": "Use only what you need (zero-dep philosophy). Subscribe to CVE alerts. Automate dependency updates (Dependabot). Regularly run npm audit. Remove unused dependencies.",
+            "owaspLink": "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/",
+            "cweIds": [
+                "CWE-1104"
+            ],
+            "prevalence": "Log4Shell affected millions of apps using an outdated Log4j version"
+        },
+        "A07:2025": {
+            "name": "Identification and Authentication Failures",
+            "description": "Weaknesses in authentication: weak passwords, credential stuffing, missing MFA, insecure session management, JWT manipulation.",
+            "mitigation": "Use secure-ref JWT helpers (OWASP-enforced standards). Implement MFA. Rate-limit login endpoints. Use secure, HttpOnly, SameSite cookies (secureRef.cookie()). Validate all JWTs server-side.",
+            "owaspLink": "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/",
+            "cweIds": [
+                "CWE-297",
+                "CWE-287",
+                "CWE-384"
+            ],
+            "prevalence": "Credential stuffing is now automated and used in millions of attacks daily"
+        },
+        "A08:2025": {
+            "name": "Software and Data Integrity Failures",
+            "description": "Code and infrastructure that does not protect against integrity violations: deserialization of untrusted data, insecure CI/CD pipelines, auto-update without signature verification.",
+            "mitigation": "Use SRI (secureRef.sri()) for CDN resources. Verify digital signatures. Use trusted package repositories. Implement CI/CD pipeline security controls. Avoid unsafe deserialization.",
+            "owaspLink": "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/",
+            "cweIds": [
+                "CWE-829",
+                "CWE-494",
+                "CWE-502"
+            ],
+            "prevalence": "SolarWinds attack compromised 18,000+ organisations via a tampered software update"
+        },
+        "A09:2025": {
+            "name": "Security Logging and Monitoring Failures",
+            "description": "Insufficient logging, detection, and response. Organisations cannot detect breaches, investigate incidents, or respond to attacks in progress. Average breach detection time exceeds 200 days.",
+            "mitigation": "Use secureRef.log() for security event logging. Log all auth failures, access control violations, and suspicious requests. Centralise logs (SIEM). Set up alerting for critical events.",
+            "owaspLink": "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/",
+            "cweIds": [
+                "CWE-778",
+                "CWE-117"
+            ],
+            "prevalence": "Most successful cyberattacks exploit the absence of real-time monitoring"
+        },
+        "A10:2025": {
+            "name": "Server-Side Request Forgery (SSRF)",
+            "description": "SSRF flaws occur when a web application fetches a remote resource without validating the user-supplied URL. Attackers can coerce the server to make requests to internal services, cloud metadata APIs, or localhost.",
+            "mitigation": "Validate and sanitise all client-supplied input URLs. Use an allowlist for remote resources. Disable HTTP redirections. Enforce network-level controls. Never use user input directly in server-side fetch calls.",
+            "owaspLink": "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/",
+            "cweIds": [
+                "CWE-918"
+            ],
+            "prevalence": "SSRF was used in the Capital One breach (2019) to access AWS metadata endpoint"
+        }
+    },
+    "bestPractices": [
+        {
+            "category": "HTTP Headers",
+            "items": [
+                "Always use secureRef() middleware before any routes",
+                "Customise CSP per route if needed (e.g., stricter on auth pages)",
+                "Add Expect-CT header for Certificate Transparency in production",
+                "Remove all headers that disclose technology stack (Server, X-Powered-By)",
+                "Never disable HSTS on production — once set, removal takes max-age duration"
+            ]
+        },
+        {
+            "category": "Authentication & Sessions",
+            "items": [
+                "Use secureRef.cookie() for all session cookies",
+                "Rotate session IDs after privilege escalation",
+                "Implement account lockout after N failed login attempts",
+                "Store password hashes with bcrypt (cost factor ≥12) or Argon2id",
+                "Never store passwords in plaintext, logs, or environment variables",
+                "Validate JWT on every request — never trust client-side claims"
+            ]
+        },
+        {
+            "category": "Input & Output",
+            "items": [
+                "Validate ALL inputs server-side regardless of client-side validation",
+                "Use parameterised queries / ORM for all database operations",
+                "Sanitize HTML output with a library like DOMPurify",
+                "Use secureRef.sanitize() for quick XSS stripping in user-generated content",
+                "Never render raw user input in HTML templates"
+            ]
+        },
+        {
+            "category": "API Security",
+            "items": [
+                "Apply secureRef.rateLimit() to all public endpoints",
+                "Rate-limit authentication endpoints more strictly (e.g., 5 req/min)",
+                "Use API versioning and deprecate old versions quickly",
+                "Return 429 with Retry-After header when rate limits are exceeded",
+                "Validate Content-Type on all POST/PUT requests"
+            ]
+        },
+        {
+            "category": "Supply Chain",
+            "items": [
+                "Prefer zero-dependency packages (like secure-ref)",
+                "Lock all dependency versions in package-lock.json / yarn.lock",
+                "Run npm audit in CI/CD pipeline — fail on high severity",
+                "Enable Dependabot or Renovate for automated security updates",
+                "Use npm provenance to validate package authenticity",
+                "Audit transitive (indirect) dependencies with tools like snyk"
+            ]
+        },
+        {
+            "category": "Infrastructure",
+            "items": [
+                "Always serve over HTTPS — use HSTS preloading for production",
+                "Use environment variables for secrets — never hard-code",
+                "Rotate credentials and API keys on a schedule",
+                "Implement WAF (Web Application Firewall) for production traffic",
+                "Use Content Delivery Networks with SRI hashes for CDN assets (secureRef.sri())",
+                "Enable npm 2FA and signed commits for package publishing"
+            ]
+        }
+    ],
+    "links": {
+        "owasp": "https://owasp.org/",
+        "secureHeaders": "https://owasp.org/www-project-secure-headers/",
+        "nodeSecurity": "https://nodejs.org/en/learn/getting-started/security-best-practices",
+        "nvd": "https://nvd.nist.gov/",
+        "mdn": "https://developer.mozilla.org/en-US/docs/Web/Security"
+    },
+    "version": "2025.1",
+    "lastUpdated": "2025-03-02"
+}

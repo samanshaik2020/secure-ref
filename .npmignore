@@ -1,0 +1,10 @@
+# Exclude everything by default, then whitelist what we need
+*
+
+# Whitelist the compiled output and docs
+!dist/
+!dist/**
+!README.md
+!LICENSE
+!SECURITY.md
+!package.json
