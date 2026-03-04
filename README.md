@@ -26,6 +26,18 @@
 
 ---
 
+## CLI Foundation
+
+Get started instantly with a pre-configured security file:
+
+```bash
+npx secure-ref init
+```
+
+This creates a `security.config.ts` path with **Smart Modes** pre-configured for your environment.
+
+---
+
 ## Installation
 
 ```bash
@@ -57,7 +69,21 @@ app.get('/', (req, res) => res.json({ ok: true }));
 app.listen(3000);
 ```
 
-**Headers set automatically:**
+### Smart Modes (v1.1.0+)
+
+`secure-ref` now supports three security "personalities" to balance protection and developer experience:
+
+- 🛠️ **`dev`** — Permissive headers (allows `unsafe-inline` for HMR, local HSTS disabled).
+- 🚀 **`production`** — OWASP-recommended defaults (Strict HSTS, Secure CSP).
+- 🛡️ **`strict`** — Maximum security (No frames, no external scripts, zero-tolerance).
+
+```ts
+app.use(secureRef({ mode: 'production' }));
+```
+
+---
+
+**Headers set automatically (Production mode):**
 
 | Header | Default |
 |--------|---------|
@@ -369,7 +395,7 @@ console.log(secureRef.reference().headers['X-Frame-Options'].explanation);
 |---------|--------|----------|
 | v0.1.0 | ✅ Today | Core headers + reference + all helpers |
 | v1.0.0 | +2 days | Full test coverage + npm publish |
-| v1.1.0 | +1 week | CLI: `npx secure-ref init` |
+| v1.1.x | ✅ Done | CLI: `npx secure-ref init` + Smart Modes |
 | v2.0.0 | Q2 2026 | Browser bundle + Vercel docs site + Redis adapter |
 
 ---
