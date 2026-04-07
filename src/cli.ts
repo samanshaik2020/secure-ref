@@ -2,14 +2,19 @@
 
 import fs from 'fs';
 import path from 'path';
+import { analyzeProject } from './analyzer.js';
 
 const command = process.argv[2] || 'help';
 
-console.log('🔒 secure-ref CLI v1.1.0\n');
+console.log('🔒 secure-ref CLI v1.4.0\n');
 
 switch (command) {
     case 'init':
         createConfig();
+        break;
+
+    case 'analyze':
+        analyzeProject();
         break;
 
     case 'help':
@@ -65,7 +70,8 @@ function showHelp() {
     console.log('');
     console.log('Commands:');
     console.log('  init     → Create security.config.ts with Smart Modes');
+    console.log('  analyze  → Run a security check & score your project');
     console.log('  help     → Show this help');
     console.log('');
-    console.log('More commands coming in v2 (analyze, audit...)');
+    console.log('More commands coming in v2 (audit...)');
 }

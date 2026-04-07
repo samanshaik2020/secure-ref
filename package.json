@@ -1,6 +1,6 @@
 {
   "name": "secure-ref",
-  "version": "1.1.1",
+  "version": "1.4.0",
   "description": "Helmet + OWASP Top 10:2025 reference in one zero-dependency import. Ultra-lightweight security middleware + education.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

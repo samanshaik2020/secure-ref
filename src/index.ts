@@ -6,7 +6,7 @@ import { REFERENCE } from './reference.js';
 export type SecureRefOptions = {
     csp?: string | false;
     frameOptions?: string | false;
-    hsts?: string | false;
+    hsts?: string | boolean;
     contentTypeOptions?: string | false;
     referrerPolicy?: string | false;
     permissionsPolicy?: string | false;
@@ -61,104 +61,93 @@ export type JwtSignOptions = {
  *
  * User-supplied options always override the mode preset.
  */
-export type Mode = 'dev' | 'production' | 'strict';
+export type Mode = 'dev' | 'production' | 'strict' | 'api-only';
 
 const MODE_CONFIGS: Record<Mode, Partial<SecureRefOptions>> = {
-    dev: {
-        hsts: false,
-        coep: false,
-        csp: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
-        removeServer: false,
-    },
-    production: {
-        hsts: 'max-age=31536000; includeSubDomains',
-        frameOptions: 'DENY',
-        csp: "default-src 'self'; script-src 'self'",
-        removeServer: true,
-    },
-    strict: {
-        hsts: 'max-age=63072000; includeSubDomains; preload',
-        frameOptions: 'DENY',
-        csp: "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'",
-        permissionsPolicy: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
-        removeServer: true,
-    },
+  dev: {
+    hsts: false,
+    csp: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    removeServer: false,
+    frameOptions: 'SAMEORIGIN'
+  },
+  production: {
+    hsts: true,
+    frameOptions: 'DENY',
+    csp: "default-src 'self'; script-src 'self'",
+    removeServer: true
+  },
+  strict: {
+    hsts: true,
+    frameOptions: 'DENY',
+    csp: "default-src 'self'; script-src 'self' 'nonce-' 'strict-dynamic'",
+    permissionsPolicy: 'camera=(), microphone=(), geolocation=(), payment=()',
+    removeServer: true
+  },
+  'api-only': {
+    hsts: true,
+    frameOptions: 'DENY',
+    csp: "default-src 'none'; connect-src 'self'",
+    removeServer: true,
+  }
 };
 
-// ─── Default Headers ─────────────────────────────────────────────────────────
+export default function secureRef(options: SecureRefOptions & { mode?: Mode } = {}) {
+  const mode = options.mode || 
+    (process.env.NODE_ENV === 'production' ? 'production' : 'dev');
 
-const DEFAULT_HEADERS: Record<string, string> = {
-    'Content-Security-Policy': "default-src 'self'",
+  const baseConfig = MODE_CONFIGS[mode] || MODE_CONFIGS.production;
+  const finalConfig = { ...baseConfig, ...options };
+
+  const headers: Record<string, string> = {
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'X-Frame-Options': (finalConfig.frameOptions as string) || 'DENY',
     'Referrer-Policy': 'no-referrer',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'X-XSS-Protection': '0',
+    'Permissions-Policy': (finalConfig.permissionsPolicy as string) || 'camera=(), microphone=()',
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Resource-Policy': 'same-origin',
-    'Cross-Origin-Embedder-Policy': 'require-corp',
-};
+    'Cross-Origin-Embedder-Policy': 'require-corp'
+  };
 
-// ─── Main Middleware ──────────────────────────────────────────────────────────
+  if (finalConfig.csp) headers['Content-Security-Policy'] = finalConfig.csp as string;
+  if (finalConfig.hsts) headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload';
 
-/**
- * Creates security middleware that sets OWASP-recommended HTTP security headers.
- *
- * Pass `mode` to select a preset, then override individual headers as needed.
- * Auto-detects NODE_ENV when no mode is specified.
- *
- * @example Auto mode (recommended)
- * ```ts
- * app.use(secureRef()); // 'dev' locally, 'production' when NODE_ENV=production
- * ```
- * @example Explicit modes
- * ```ts
- * app.use(secureRef({ mode: 'strict' }));                    // banking/finance
- * app.use(secureRef({ mode: 'production', csp: 'custom' })); // override one header
- * ```
- */
-export default function secureRef(options: SecureRefOptions & { mode?: Mode } = {}) {
-    // 1. Resolve mode: explicit > NODE_ENV > 'dev'
-    const mode: Mode = options.mode ??
-        (process.env['NODE_ENV'] === 'production' ? 'production' : 'dev');
+  return (req: any, res: any, next: () => void) => {
+    Object.entries(headers).forEach(([key, value]) => {
+      if (value) res.setHeader(key, value);
+    });
 
-    // 2. Merge: defaults ← mode preset ← user options (user always wins)
-    const { mode: _mode, ...userOpts } = options;
-    const resolved: SecureRefOptions = { ...MODE_CONFIGS[mode], ...userOpts };
-
-    // 3. Build the headers map from resolved options
-    const headers = { ...DEFAULT_HEADERS };
-
-    function applyOpt(opt: string | false | undefined, headerName: string) {
-        if (opt === undefined) return;
-        if (opt === false) delete headers[headerName];
-        else headers[headerName] = opt;
+    if (finalConfig.removeServer !== false) {
+      res.removeHeader('Server');
+      res.removeHeader('X-Powered-By');
     }
 
-    applyOpt(resolved.csp, 'Content-Security-Policy');
-    applyOpt(resolved.frameOptions, 'X-Frame-Options');
-    applyOpt(resolved.hsts, 'Strict-Transport-Security');
-    applyOpt(resolved.contentTypeOptions, 'X-Content-Type-Options');
-    applyOpt(resolved.referrerPolicy, 'Referrer-Policy');
-    applyOpt(resolved.permissionsPolicy, 'Permissions-Policy');
-    applyOpt(resolved.xssProtection, 'X-XSS-Protection');
-    applyOpt(resolved.coop, 'Cross-Origin-Opener-Policy');
-    applyOpt(resolved.corp, 'Cross-Origin-Resource-Policy');
-    applyOpt(resolved.coep, 'Cross-Origin-Embedder-Policy');
+    // === Basic Runtime Threat Monitoring ===
+    if (req.body || req.query) {
+      const input = JSON.stringify({ ...req.body, ...req.query });
+      const threats = detectThreats(input);
+      if (threats.length > 0) {
+        log('potential_threat_detected', { 
+          threats, 
+          path: req.path || req.url, 
+          ip: req.ip || req.connection?.remoteAddress
+        }, req);
+      }
+    }
 
-    // Pre-compute entries once at factory time — zero overhead per request
-    const entries = Object.entries(headers) as [string, string][];
-    const shouldRemoveServer = resolved.removeServer !== false;
+    next();
+  };
+}
 
-    return (req: unknown, res: { setHeader: (k: string, v: string) => void; removeHeader: (k: string) => void }, next: () => void) => {
-        for (const [k, v] of entries) res.setHeader(k, v);
-        if (shouldRemoveServer) {
-            res.removeHeader('Server');
-            res.removeHeader('X-Powered-By');
-        }
-        next();
-    };
+// Basic Runtime Threat Detection (zero dep, fast regex)
+function detectThreats(input: string): string[] {
+  const threats: string[] = [];
+  const lower = input.toLowerCase();
+
+  if (/<script|javascript:|onerror=|onload=/i.test(lower)) threats.push('XSS');
+  if (/union\s+select|drop\s+table|exec\s*\(|1=1|--/i.test(lower)) threats.push('SQL Injection');
+  if (/\.\.\/|\.\.\\|%2e%2e/i.test(lower)) threats.push('Path Traversal');
+
+  return threats;
 }
 
 /** Returns the active mode that would be selected for a given options object */
